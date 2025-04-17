@@ -1,3 +1,28 @@
+// Preload critical resources
+const preloadResources = () => {
+    // Preload fonts
+    const fontPreloads = [
+        'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Montserrat:wght@300;400;500;600&display=swap'
+    ];
+    
+    fontPreloads.forEach(href => {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'style';
+        link.href = href;
+        document.head.appendChild(link);
+    });
+};
+
+// Initialize performance optimizations before DOM is fully loaded
+preloadResources();
+
+// Wait for initial render to complete before enabling animations
+let animationsEnabled = false;
+setTimeout(() => {
+    animationsEnabled = true;
+}, 300);
+
 document.addEventListener('DOMContentLoaded', function() {
     // Mobile navigation toggle
     const menuToggle = document.querySelector('.menu-toggle');
@@ -56,17 +81,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Scroll reveal animations
+    // Image optimization
+    function optimizeImages() {
+        const images = document.querySelectorAll('img');
+        
+        images.forEach(img => {
+            // Set initial opacity to 0
+            img.style.opacity = '0';
+            img.style.transition = 'opacity 0.5s ease';
+            
+            // Show image when loaded
+            if (img.complete) {
+                setTimeout(() => {
+                    img.style.opacity = '1';
+                }, 50);
+            } else {
+                img.addEventListener('load', function() {
+                    setTimeout(() => {
+                        img.style.opacity = '1';
+                    }, 50);
+                });
+            }
+            
+            // Add loading attribute for native lazy loading
+            img.setAttribute('loading', 'lazy');
+            
+            // Add decoding attribute for performance
+            img.setAttribute('decoding', 'async');
+        });
+    }
+    
+    // Run image optimization after a small delay
+    setTimeout(optimizeImages, 100);
+    
+    // Scroll reveal animations - improved to prevent jitter
     const observerOptions = {
         root: null,
         rootMargin: '0px',
-        threshold: 0.15
+        threshold: 0.1
     };
     
     const observer = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('fade-in');
+            if (entry.isIntersecting && animationsEnabled) {
+                // Add a small staggered delay before adding animation class
+                setTimeout(() => {
+                    entry.target.classList.add('fade-in');
+                }, 50);
                 observer.unobserve(entry.target);
             }
         });
@@ -87,21 +148,56 @@ document.addEventListener('DOMContentLoaded', function() {
         ...document.querySelectorAll('.contact-form')
     ];
     
-    // Add delay classes to specific elements
+    // Add delay classes to specific elements - with reduced animation timing
     const productCards = document.querySelectorAll('.product-card');
     productCards.forEach((card, index) => {
+        // Set initial opacity in CSS to prevent flash
+        card.style.opacity = '0';
         card.classList.add(`fade-in-delay-${(index % 3) + 1}`);
     });
     
     const processSteps = document.querySelectorAll('.process-step');
     processSteps.forEach((step, index) => {
+        // Set initial opacity in CSS to prevent flash
+        step.style.opacity = '0';
         step.classList.add(`fade-in-delay-${(index % 4) + 1}`);
     });
     
-    // Observe all elements
-    animateElements.forEach(element => {
-        observer.observe(element);
-    });
+    // Observe all elements - with delay to ensure DOM is settled
+    setTimeout(() => {
+        animateElements.forEach(element => {
+            observer.observe(element);
+        });
+    }, 150);
+    
+    // Product hover effects - with optimized handlers
+    const applyProductCardEffects = () => {
+        const productCards = document.querySelectorAll('.product-card');
+        
+        productCards.forEach(card => {
+            const image = card.querySelector('.product-image');
+            
+            card.addEventListener('mouseenter', () => {
+                requestAnimationFrame(() => {
+                    if (image) {
+                        image.style.transform = 'scale(1.02)';
+                        image.style.transition = 'transform 0.3s ease';
+                    }
+                });
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                requestAnimationFrame(() => {
+                    if (image) {
+                        image.style.transform = 'scale(1)';
+                    }
+                });
+            });
+        });
+    };
+    
+    // Apply product card effects
+    setTimeout(applyProductCardEffects, 200);
     
     // Form submissions
     const newsletterForm = document.querySelector('.newsletter-form');
@@ -239,45 +335,61 @@ document.addEventListener('DOMContentLoaded', function() {
             
             showToast(`${productTitle} added to cart!`, 'success');
         });
-        
-        // Add hover effect to product cards
-        const productCard = button.closest('.product-card');
-        if (productCard) {
-            productCard.addEventListener('mouseenter', function() {
-                this.querySelector('.product-image').style.transform = 'scale(1.02)';
-                this.querySelector('.product-image').style.transition = 'transform 0.3s ease';
-            });
-            
-            productCard.addEventListener('mouseleave', function() {
-                this.querySelector('.product-image').style.transform = 'scale(1)';
-            });
-        }
     });
     
-    // Add parallax effect to hero section
+    // Optimized parallax effect for hero section using requestAnimationFrame
     const hero = document.querySelector('.hero');
     if (hero) {
+        let ticking = false;
+        
         window.addEventListener('scroll', function() {
-            const scrollPosition = window.scrollY;
-            hero.style.backgroundPositionY = `${scrollPosition * 0.4}px`;
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    const scrollPosition = window.scrollY;
+                    if (hero.style) {
+                        hero.style.backgroundPositionY = `${scrollPosition * 0.3}px`;
+                    }
+                    ticking = false;
+                });
+                
+                ticking = true;
+            }
         });
     }
-    
-    // Add smooth transition on page load
-    window.addEventListener('load', function() {
+});
+
+// Optimized page load transitions with performance timing
+window.addEventListener('load', function() {
+    // Use requestAnimationFrame for better performance
+    requestAnimationFrame(() => {
+        // Add page-loaded class to body for initial fade-in
         document.body.classList.add('page-loaded');
         
-        // Add animation to hero content
+        // Animate hero content with smoother timing
         const heroContent = document.querySelector('.hero-content');
         if (heroContent) {
+            // Set initial state
             heroContent.style.opacity = '0';
             heroContent.style.transform = 'translateY(20px)';
             
-            setTimeout(() => {
+            // Trigger animation after layout is stable
+            requestAnimationFrame(() => {
+                // Add transition properties first
+                heroContent.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                
+                // Force a reflow before changing properties
+                heroContent.offsetHeight;
+                
+                // Then change the properties to animate
                 heroContent.style.opacity = '1';
                 heroContent.style.transform = 'translateY(0)';
-                heroContent.style.transition = 'opacity 1s ease, transform 1s ease';
-            }, 200);
+            });
         }
+        
+        // Add performance optimization hints to browser
+        const links = document.querySelectorAll('a[href^="#"]');
+        links.forEach(link => {
+            link.setAttribute('rel', 'prerender');
+        });
     });
 });
